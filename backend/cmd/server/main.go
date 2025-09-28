@@ -9,7 +9,9 @@ import (
 	"jobsity-backend/internal/middleware"
 	"jobsity-backend/internal/repository"
 	"jobsity-backend/internal/service"
+	"jobsity-backend/internal/websocket"
 
+	fiberws "github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -37,10 +39,18 @@ func main() {
 	channelRepo := repository.NewMongoChannelRepository(db.Collection("channels"))
 	messageRepo := repository.NewMongoMessageRepository(db.Collection("messages"))
 
+	// Initialize WebSocket hub
+	wsHub := websocket.NewHub()
+	go wsHub.Run()
+
+	// Initialize WebSocket handler
+	wsHandler := websocket.NewHandler(wsHub)
+
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	channelService := service.NewChannelService(channelRepo)
-	messageService := service.NewMessageService(messageRepo, channelRepo)
+	baseMessageService := service.NewMessageService(messageRepo, channelRepo)
+	messageService := service.NewWebSocketMessageService(baseMessageService, wsHandler)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
@@ -87,6 +97,10 @@ func main() {
 	api.Get("/channels/:channelId/messages/after", messageHandler.GetMessagesByChannelAfter)
 	api.Put("/messages/:id", middleware.AuthMiddleware(), messageHandler.UpdateMessage)
 	api.Delete("/messages/:id", middleware.AuthMiddleware(), messageHandler.DeleteMessage)
+
+	// WebSocket routes
+	api.Get("/ws", middleware.AuthMiddleware(), fiberws.New(wsHandler.HandleWebSocket))
+	api.Get("/ws/stats", wsHandler.GetStats())
 
 	// Start server
 	log.Printf("Server starting on :%s", cfg.Server.Port)
