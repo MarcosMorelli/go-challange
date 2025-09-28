@@ -1,4 +1,4 @@
-db = db.getSiblingDB("jobsity-challange");
+db = db.getSiblingDB("jobsity");
 
 db.createCollection("users");
 

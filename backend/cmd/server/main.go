@@ -6,6 +6,7 @@ import (
 	"jobsity-backend/internal/config"
 	"jobsity-backend/internal/database"
 	"jobsity-backend/internal/handlers"
+	"jobsity-backend/internal/middleware"
 	"jobsity-backend/internal/repository"
 	"jobsity-backend/internal/service"
 
@@ -19,7 +20,7 @@ func main() {
 	cfg := config.Load()
 
 	// Connect to MongoDB
-	client, collection, err := database.ConnectMongo(database.Config{
+	client, err := database.ConnectMongo(database.Config{
 		URI:      cfg.Database.URI,
 		Database: cfg.Database.Database,
 	})
@@ -28,14 +29,23 @@ func main() {
 	}
 	defer database.DisconnectMongo(client)
 
-	// Initialize repository
-	userRepo := repository.NewMongoUserRepository(collection)
+	// Get database instance
+	db := client.Database(cfg.Database.Database)
 
-	// Initialize service
+	// Initialize repositories
+	userRepo := repository.NewMongoUserRepository(db.Collection("users"))
+	channelRepo := repository.NewMongoChannelRepository(db.Collection("channels"))
+	messageRepo := repository.NewMongoMessageRepository(db.Collection("messages"))
+
+	// Initialize services
 	userService := service.NewUserService(userRepo)
+	channelService := service.NewChannelService(channelRepo)
+	messageService := service.NewMessageService(messageRepo, channelRepo)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
+	channelHandler := handlers.NewChannelHandler(channelService)
+	messageHandler := handlers.NewMessageHandler(messageService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -56,9 +66,27 @@ func main() {
 
 	// API routes
 	api := app.Group("/api/v1")
+
+	// User routes
 	api.Post("/login", userHandler.Login)
 	api.Post("/users", userHandler.CreateUser)
 	api.Get("/users/:email", userHandler.GetUser)
+
+	// Channel routes
+	api.Post("/channels", middleware.AuthMiddleware(), channelHandler.CreateChannel)
+	api.Get("/channels", channelHandler.GetAllChannels)
+	api.Get("/channels/:id", channelHandler.GetChannel)
+	api.Get("/channels/name/:name", channelHandler.GetChannelByName)
+	api.Put("/channels/:id", middleware.AuthMiddleware(), channelHandler.UpdateChannel)
+	api.Delete("/channels/:id", middleware.AuthMiddleware(), channelHandler.DeleteChannel)
+
+	// Message routes
+	api.Post("/messages", middleware.AuthMiddleware(), messageHandler.CreateMessage)
+	api.Get("/messages/:id", messageHandler.GetMessage)
+	api.Get("/channels/:channelId/messages", messageHandler.GetMessagesByChannel)
+	api.Get("/channels/:channelId/messages/after", messageHandler.GetMessagesByChannelAfter)
+	api.Put("/messages/:id", middleware.AuthMiddleware(), messageHandler.UpdateMessage)
+	api.Delete("/messages/:id", middleware.AuthMiddleware(), messageHandler.DeleteMessage)
 
 	// Start server
 	log.Printf("Server starting on :%s", cfg.Server.Port)

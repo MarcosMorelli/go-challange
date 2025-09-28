@@ -47,7 +47,7 @@ fi
 
 echo "🧪 Running integration tests..."
 cd backend
-go test -v ./tests/integration/...
+go test -v ./tests/integration/... -run "TestAPISuite|TestChannelSuite|TestMessageSuite"
 
 echo "🧹 Cleaning up Docker services..."
 cd ..
