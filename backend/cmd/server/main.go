@@ -13,7 +13,6 @@ import (
 
 	fiberws "github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
@@ -64,7 +63,6 @@ func main() {
 
 	// Middleware
 	app.Use(logger.New())
-	app.Use(cors.New())
 
 	// Health check route
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -94,12 +92,11 @@ func main() {
 	api.Post("/messages", middleware.AuthMiddleware(), messageHandler.CreateMessage)
 	api.Get("/messages/:id", messageHandler.GetMessage)
 	api.Get("/channels/:channelId/messages", messageHandler.GetMessagesByChannel)
-	api.Get("/channels/:channelId/messages/after", messageHandler.GetMessagesByChannelAfter)
 	api.Put("/messages/:id", middleware.AuthMiddleware(), messageHandler.UpdateMessage)
 	api.Delete("/messages/:id", middleware.AuthMiddleware(), messageHandler.DeleteMessage)
 
 	// WebSocket routes
-	api.Get("/ws", middleware.AuthMiddleware(), fiberws.New(wsHandler.HandleWebSocket))
+	api.Get("/ws", fiberws.New(wsHandler.HandleWebSocket))
 	api.Get("/ws/stats", wsHandler.GetStats())
 
 	// Start server

@@ -55,9 +55,20 @@ type Message struct {
 // readPump pumps messages from the websocket connection to the hub
 func (c *Client) readPump() {
 	defer func() {
+		log.Printf("Client readPump exiting for user: %s", c.UserEmail)
 		c.hub.unregister <- c
-		c.conn.Close()
+		if c.conn != nil {
+			c.conn.Close()
+		}
 	}()
+
+	log.Printf("Starting readPump for user: %s", c.UserEmail)
+
+	// Check if connection is valid
+	if c.conn == nil {
+		log.Printf("WebSocket connection is nil for user: %s", c.UserEmail)
+		return
+	}
 
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -66,14 +77,36 @@ func (c *Client) readPump() {
 		return nil
 	})
 
+	// Send a welcome message to the client
+	welcomeMessage := Message{
+		Type:      "connected",
+		ChannelID: c.ChannelID,
+		UserEmail: c.UserEmail,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+	if welcomeBytes, err := json.Marshal(welcomeMessage); err == nil {
+		c.send <- welcomeBytes
+		log.Printf("Sent welcome message to user %s", c.UserEmail)
+	}
+
 	for {
+		// Check if connection is still valid
+		if c.conn == nil {
+			log.Printf("WebSocket connection became nil for user: %s", c.UserEmail)
+			break
+		}
+
 		_, messageBytes, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				log.Printf("WebSocket error for user %s: %v", c.UserEmail, err)
+			} else {
+				log.Printf("WebSocket read error for user %s: %v", c.UserEmail, err)
 			}
 			break
 		}
+
+		log.Printf("Received message from user %s: %s", c.UserEmail, string(messageBytes))
 
 		// Parse the incoming message
 		var message Message

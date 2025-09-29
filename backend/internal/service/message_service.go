@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"jobsity-backend/pkg/domain"
-	"time"
 )
 
 // MessageService defines the interface for message business logic
@@ -16,9 +15,6 @@ type MessageService interface {
 
 	// GetMessagesByChannel gets messages for a specific channel
 	GetMessagesByChannel(ctx context.Context, channelID string, limit int) ([]*domain.Message, error)
-
-	// GetMessagesByChannelAfter gets messages for a channel after a specific timestamp
-	GetMessagesByChannelAfter(ctx context.Context, channelID string, after time.Time, limit int) ([]*domain.Message, error)
 
 	// UpdateMessage updates an existing message
 	UpdateMessage(ctx context.Context, id string, content string, userEmail string) (*domain.Message, error)

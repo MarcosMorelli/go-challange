@@ -5,7 +5,6 @@ import (
 	"errors"
 	"jobsity-backend/internal/repository"
 	"jobsity-backend/pkg/domain"
-	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -75,20 +74,6 @@ func (s *MessageServiceImpl) GetMessagesByChannel(ctx context.Context, channelID
 	}
 
 	return s.messageRepo.FindByChannelID(ctx, channelID, limit)
-}
-
-// GetMessagesByChannelAfter gets messages for a channel after a specific timestamp
-func (s *MessageServiceImpl) GetMessagesByChannelAfter(ctx context.Context, channelID string, after time.Time, limit int) ([]*domain.Message, error) {
-	// Verify channel exists
-	_, err := s.channelRepo.FindByID(ctx, channelID)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, errors.New("channel not found")
-		}
-		return nil, err
-	}
-
-	return s.messageRepo.FindByChannelIDAndAfter(ctx, channelID, after, limit)
 }
 
 // UpdateMessage updates an existing message

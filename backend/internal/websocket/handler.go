@@ -23,31 +23,36 @@ func NewHandler(hub *Hub) *Handler {
 
 // HandleWebSocket handles WebSocket connections
 func (h *Handler) HandleWebSocket(c *websocket.Conn) {
-	// Get user email from context (set by auth middleware)
-	userEmail := c.Locals("userEmail")
-	if userEmail == nil {
-		log.Printf("WebSocket connection rejected: user not authenticated")
+	// Get user email from query parameter
+	userEmail := c.Query("user_email", "")
+	if userEmail == "" {
+		log.Printf("WebSocket connection rejected: user email not provided")
+		c.Close()
 		return
 	}
 
 	// Get channel ID from query parameter (optional)
 	channelID := c.Query("channel_id", "")
 
+	log.Printf("WebSocket connection established for user: %s, channel: %s", userEmail, channelID)
+
 	// Create new client
 	client := &Client{
 		conn:      c,
 		send:      make(chan []byte, 256),
 		hub:       h.hub,
-		UserEmail: userEmail.(string),
+		UserEmail: userEmail,
 		ChannelID: channelID,
 	}
 
 	// Register client with hub
 	client.hub.register <- client
 
-	// Start goroutines for reading and writing
+	// Start writePump in a goroutine
 	go client.writePump()
-	go client.readPump()
+
+	// Run readPump in the main thread to keep the connection alive
+	client.readPump()
 }
 
 // BroadcastMessage broadcasts a message to all clients in a channel

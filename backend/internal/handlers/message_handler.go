@@ -4,7 +4,6 @@ import (
 	"jobsity-backend/internal/service"
 	"jobsity-backend/pkg/domain"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -93,63 +92,8 @@ func (h *MessageHandler) GetMessagesByChannel(c *fiber.Ctx) error {
 	if err != nil || limit <= 0 {
 		limit = 50
 	}
-	if limit > 100 {
-		limit = 100
-	}
 
 	messages, err := h.messageService.GetMessagesByChannel(c.Context(), channelID, limit)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(domain.MessagesResponse{
-			Success: false,
-			Message: err.Error(),
-		})
-	}
-
-	return c.JSON(domain.MessagesResponse{
-		Success:  true,
-		Message:  "Messages retrieved successfully",
-		Messages: messages,
-	})
-}
-
-// GetMessagesByChannelAfter handles getting messages for a channel after a timestamp
-func (h *MessageHandler) GetMessagesByChannelAfter(c *fiber.Ctx) error {
-	channelID := c.Params("channelId")
-	if channelID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(domain.MessagesResponse{
-			Success: false,
-			Message: "Channel ID is required",
-		})
-	}
-
-	// Parse after parameter
-	afterStr := c.Query("after")
-	if afterStr == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(domain.MessagesResponse{
-			Success: false,
-			Message: "After timestamp is required",
-		})
-	}
-
-	after, err := time.Parse(time.RFC3339, afterStr)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(domain.MessagesResponse{
-			Success: false,
-			Message: "Invalid timestamp format. Use RFC3339 format",
-		})
-	}
-
-	// Parse limit parameter
-	limitStr := c.Query("limit", "50")
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 50
-	}
-	if limit > 100 {
-		limit = 100
-	}
-
-	messages, err := h.messageService.GetMessagesByChannelAfter(c.Context(), channelID, after, limit)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.MessagesResponse{
 			Success: false,

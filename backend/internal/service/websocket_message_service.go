@@ -51,11 +51,6 @@ func (s *WebSocketMessageService) GetMessagesByChannel(ctx context.Context, chan
 	return s.messageService.GetMessagesByChannel(ctx, channelID, limit)
 }
 
-// GetMessagesByChannelAfter gets messages for a channel after a specific timestamp
-func (s *WebSocketMessageService) GetMessagesByChannelAfter(ctx context.Context, channelID string, after time.Time, limit int) ([]*domain.Message, error) {
-	return s.messageService.GetMessagesByChannelAfter(ctx, channelID, after, limit)
-}
-
 // UpdateMessage updates an existing message and broadcasts the update
 func (s *WebSocketMessageService) UpdateMessage(ctx context.Context, id string, content string, userEmail string) (*domain.Message, error) {
 	// Update the message using the underlying service

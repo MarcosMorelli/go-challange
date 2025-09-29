@@ -60,36 +60,6 @@ func (r *MongoMessageRepository) FindByID(ctx context.Context, id string) (*doma
 func (r *MongoMessageRepository) FindByChannelID(ctx context.Context, channelID string, limit int) ([]*domain.Message, error) {
 	filter := bson.M{"channel_id": channelID}
 
-	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}})
-	if limit > 0 {
-		opts.SetLimit(int64(limit))
-	}
-
-	cursor, err := r.collection.Find(ctx, filter, opts)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var messages []*domain.Message
-	for cursor.Next(ctx) {
-		var message domain.Message
-		if err := cursor.Decode(&message); err != nil {
-			return nil, err
-		}
-		messages = append(messages, &message)
-	}
-
-	return messages, nil
-}
-
-// FindByChannelIDAndAfter finds messages for a channel after a specific timestamp
-func (r *MongoMessageRepository) FindByChannelIDAndAfter(ctx context.Context, channelID string, after time.Time, limit int) ([]*domain.Message, error) {
-	filter := bson.M{
-		"channel_id": channelID,
-		"created_at": bson.M{"$gt": after},
-	}
-
 	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}})
 	if limit > 0 {
 		opts.SetLimit(int64(limit))

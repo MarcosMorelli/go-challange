@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"jobsity-backend/pkg/domain"
-	"time"
 )
 
 // MessageRepository defines the interface for message data operations
@@ -16,9 +15,6 @@ type MessageRepository interface {
 
 	// FindByChannelID finds all messages for a specific channel
 	FindByChannelID(ctx context.Context, channelID string, limit int) ([]*domain.Message, error)
-
-	// FindByChannelIDAndAfter finds messages for a channel after a specific timestamp
-	FindByChannelIDAndAfter(ctx context.Context, channelID string, after time.Time, limit int) ([]*domain.Message, error)
 
 	// Update updates an existing message
 	Update(ctx context.Context, message *domain.Message) error

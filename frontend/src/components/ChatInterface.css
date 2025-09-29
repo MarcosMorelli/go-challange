@@ -1,0 +1,100 @@
+/* ChatInterface.css */
+.chat-interface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  height: 100%;
+}
+
+.chat-interface.no-channel {
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+}
+
+.no-channel-content {
+  text-align: center;
+  color: #666;
+}
+
+.no-channel-content h2 {
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.chat-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e1e5e9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+}
+
+.channel-info h2 {
+  margin: 0 0 4px 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.channel-info p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-indicator {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-indicator.connected {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-indicator.disconnected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8f9fa;
+}
+
+.loading-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #666;
+}
+
+.loading-messages .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e1e5e9;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
