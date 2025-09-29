@@ -60,7 +60,8 @@ func (r *MongoMessageRepository) FindByID(ctx context.Context, id string) (*doma
 func (r *MongoMessageRepository) FindByChannelID(ctx context.Context, channelID string, limit int) ([]*domain.Message, error) {
 	filter := bson.M{"channel_id": channelID}
 
-	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}})
+	// Sort by created_at desc to get newest messages first, then limit
+	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}})
 	if limit > 0 {
 		opts.SetLimit(int64(limit))
 	}
@@ -78,6 +79,12 @@ func (r *MongoMessageRepository) FindByChannelID(ctx context.Context, channelID 
 			return nil, err
 		}
 		messages = append(messages, &message)
+	}
+
+	// Reverse the order to return oldest first for proper display
+	// (newest messages at the bottom of the chat)
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
 	}
 
 	return messages, nil

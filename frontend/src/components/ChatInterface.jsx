@@ -61,15 +61,14 @@ const ChatInterface = ({ channel, user, onConnectionChange }) => {
 
     setLoading(true);
     try {
-      // Fetch messages with limit and ensure they're sorted by created_at desc
+      // Fetch messages with limit - backend returns oldest first
       const response = await fetch(
         `/api/v1/channels/${channel.id}/messages?limit=50`
       );
       const data = await response.json();
 
       if (data.success) {
-        // Messages should already be sorted by created_at desc from backend
-        // But let's ensure they're in the correct order for display
+        // Messages are sorted by created_at asc from backend (oldest first)
         const messages = data.messages || [];
         setMessages(messages);
       }
@@ -134,13 +133,8 @@ const ChatInterface = ({ channel, user, onConnectionChange }) => {
   const handleWebSocketMessage = (message) => {
     switch (message.type) {
       case "new_message":
-        // Add new message and sort by created_at desc to maintain order
-        setMessages((prev) => {
-          const updated = [...prev, message.data];
-          return updated.sort(
-            (a, b) => new Date(b.created_at) - new Date(a.created_at)
-          );
-        });
+        // Add new message to the end since backend returns oldest first
+        setMessages((prev) => [...prev, message.data]);
         break;
       case "message_updated":
         setMessages((prev) =>
