@@ -4,19 +4,23 @@ import (
 	"jobsity-backend/internal/service"
 	"jobsity-backend/pkg/domain"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/streadway/amqp"
 )
 
 // MessageHandler handles HTTP requests for message operations
 type MessageHandler struct {
 	messageService service.MessageService
+	rabbitMQ       *amqp.Channel
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(messageService service.MessageService) *MessageHandler {
+func NewMessageHandler(messageService service.MessageService, rabbitMQ *amqp.Channel) *MessageHandler {
 	return &MessageHandler{
 		messageService: messageService,
+		rabbitMQ:       rabbitMQ,
 	}
 }
 
@@ -35,7 +39,43 @@ func (h *MessageHandler) CreateMessage(c *fiber.Ctx) error {
 	// Get user email from context
 	userEmail := c.Locals("userEmail").(string)
 
-	// Call service
+	// Check if it's a stock command
+	if strings.HasPrefix(req.Content, "/stock=") {
+		stockCode := strings.TrimPrefix(req.Content, "/stock=")
+		if stockCode == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(domain.MessageResponse{
+				Success: false,
+				Message: "Stock code is required",
+			})
+		}
+
+		// Publish to RabbitMQ for stock bot processing
+		command := req.ChannelID + "|" + userEmail + "|" + stockCode
+		err := h.rabbitMQ.Publish(
+			"",               // exchange
+			"stock_commands", // routing key
+			false,            // mandatory
+			false,            // immediate
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        []byte(command),
+			},
+		)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(domain.MessageResponse{
+				Success: false,
+				Message: "Failed to process stock command",
+			})
+		}
+
+		// Return success but don't save the command to database
+		return c.Status(fiber.StatusOK).JSON(domain.MessageResponse{
+			Success: true,
+			Message: "Stock command processed",
+		})
+	}
+
+	// Call service for regular messages
 	message, err := h.messageService.CreateMessage(c.Context(), &req, userEmail)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.MessageResponse{

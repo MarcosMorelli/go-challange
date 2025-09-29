@@ -30,6 +30,27 @@ func main() {
 	}
 	defer database.DisconnectMongo(client)
 
+	// Connect to RabbitMQ
+	rabbitMQConfig := config.LoadRabbitMQConfig()
+	rabbitMQConn, err := config.ConnectRabbitMQ(rabbitMQConfig)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ:", err)
+	}
+	defer rabbitMQConn.Close()
+
+	// Create RabbitMQ channel
+	rabbitMQCh, err := rabbitMQConn.Channel()
+	if err != nil {
+		log.Fatal("Failed to create RabbitMQ channel:", err)
+	}
+	defer rabbitMQCh.Close()
+
+	// Setup RabbitMQ queues
+	err = config.SetupStockQueue(rabbitMQCh)
+	if err != nil {
+		log.Fatal("Failed to setup RabbitMQ queues:", err)
+	}
+
 	// Get database instance
 	db := client.Database(cfg.Database.Database)
 
@@ -51,10 +72,38 @@ func main() {
 	baseMessageService := service.NewMessageService(messageRepo, channelRepo)
 	messageService := service.NewWebSocketMessageService(baseMessageService, wsHandler)
 
+	// Initialize stock bot
+	stockBot, err := service.NewStockBot(rabbitMQConn)
+	if err != nil {
+		log.Fatal("Failed to create stock bot:", err)
+	}
+	defer stockBot.Close()
+
+	// Start stock bot
+	err = stockBot.Start()
+	if err != nil {
+		log.Fatal("Failed to start stock bot:", err)
+	}
+
+	// Initialize stock response handler
+	stockResponseHandler, err := service.NewStockResponseHandler(rabbitMQConn, func(channelID string, message []byte) {
+		wsHub.BroadcastToChannel(channelID, message)
+	})
+	if err != nil {
+		log.Fatal("Failed to create stock response handler:", err)
+	}
+	defer stockResponseHandler.Close()
+
+	// Start stock response handler
+	err = stockResponseHandler.Start()
+	if err != nil {
+		log.Fatal("Failed to start stock response handler:", err)
+	}
+
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	channelHandler := handlers.NewChannelHandler(channelService)
-	messageHandler := handlers.NewMessageHandler(messageService)
+	messageHandler := handlers.NewMessageHandler(messageService, rabbitMQCh)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
